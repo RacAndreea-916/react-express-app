@@ -1,0 +1,33 @@
+[
+    {
+      "id": 1,
+      "name": "Bessie",
+      "age": 5,
+      "race": "Holstein"
+    },
+    {
+      "id": 2,
+      "name": "MooMoo",
+      "age": 3,
+      "race": "Jersey"
+    },
+    {
+      "id": 3,
+      "name": "Spot",
+      "age": 4,
+      "race": "Hereford"
+    },
+    {
+      "id": 4,
+      "name": "Daisy",
+      "age": 6,
+      "race": "Angus"
+    },
+    {
+      "id": 5,
+      "name": "Clarabelle",
+      "age": 7,
+      "race": "Friesian"
+    }
+  ]
+  
