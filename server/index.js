@@ -10,7 +10,7 @@ const { v4: uuidv4 } = require('uuid');
 const cows = [
     { id: 1, name: 'Marinela', age: 5, race: 'Angus' },
     { id: 2, name: 'Carmen', age: 3, race: 'Jersey' },
-    { id:3, name: 'Betsy', age: 4, race: 'Limousin' },
+    { id: 3, name: 'Betsy', age: 4, race: 'Limousin' },
     { id: 4, name: 'Mama', age: 6, race: 'Holstein' },
     { id: 5, name: 'Vioric', age: 2, race: 'Hereford' },
   ];
@@ -75,7 +75,7 @@ app.patch('/update/:id', (req, res) => {
 
     const cowToUpdateIndex = cows.findIndex(cow => cow.id == id);
     if (cowToUpdateIndex === -1) {
-        res.status(404).send("Cow not found");
+        res.status(404).send("cow not found");
     } else {
         const cowToUpdate = cows[cowToUpdateIndex];
 
@@ -89,7 +89,7 @@ app.patch('/update/:id', (req, res) => {
             cowToUpdate.race = race;
         }
 
-        res.status(200).send("Cow updated successfully");
+        res.status(200).send("cow updated successfully");
     }
 });
 

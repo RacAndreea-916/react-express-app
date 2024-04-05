@@ -21,6 +21,7 @@ describe('GET /', () => {
   });
 });
 
+
 describe('POST /cow', () => {
   it('adds a new cow', async () => {
     const newCow = { name: 'NewCow', age: 1, race: 'Unknown' };
@@ -48,12 +49,12 @@ describe('GET /read/:id', () => {
     });
   });
   
-  describe('PUT /update/:id', () => {
+  describe('PATCH /update/:id', () => {
     it('updates the specified cow', async () => {
       const id = 1; 
       const updatedCow = { name: 'UpdatedCow', age: 6, race: 'UpdatedRace' };
       const response = await request(app)
-        .put(`/update/${id}`)
+        .patch(`/update/${id}`)
         .send(updatedCow);
       expect(response.status).toBe(200);
       expect(response.text).toBe('cow updated successfully');
@@ -63,7 +64,7 @@ describe('GET /read/:id', () => {
       const id = 999;
       const updatedCow = { name: 'UpdatedCow', age: 6, race: 'UpdatedRace' };
       const response = await request(app)
-        .put(`/update/${id}`)
+        .patch(`/update/${id}`)
         .send(updatedCow);
       expect(response.status).toBe(404);
       expect(response.text).toBe('cow not found');
