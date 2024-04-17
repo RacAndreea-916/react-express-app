@@ -31,6 +31,25 @@ function Home() {
     const [items, setItems] = useState([]);
     const [farmers, setFarmers] = useState([]);
 
+    const handleSort = () =>{
+      axios.get("http://localhost:8081/cowsSorted")
+      .then(res=>setItems(res.data))
+      .catch(err => {
+        if(err.message.includes("NetworkError"))
+          alert("internet down")
+        else alert("server is down")
+        setTimeout(loadData(), 5000) 
+      })
+      
+      axios.get("http://localhost:8081/farmers")
+      .then(res=>setFarmers(res.data))
+      .catch(err => {
+        if(err.message.includes("NetworkError"))
+          alert("internet down")
+        else alert("server is down")
+        setTimeout(loadData(), 5000) 
+      })
+    }
 
     const loadData = () => {
       axios.get("http://localhost:8081/cows")
@@ -71,26 +90,8 @@ function Home() {
     }
     
 
-    const [selectedItems, setSelectedItems] = useState([]);
+    
 
-    const handleCheckboxChange = (id)=>{
-      if(selectedItems.includes(id)){
-        setSelectedItems(selectedItems.filter(itemId => itemId !== id));
-      }
-      else{
-        setSelectedItems([...selectedItems, id]);
-      }
-    }
-
-    const handleBulkDelete = () => {
-      const confirm = window.confirm("Are you sure you want to delete?");
-      if (confirm) {
-          const newItems = items.filter(item => !selectedItems.includes(item.id));
-          setItems(newItems);
-          setSelectedItems([]);
-          localStorage.setItem('items', JSON.stringify(newItems));
-      }
-  };
 
   const handleExport = ()=>{
     exportDataToJson(items);
@@ -112,16 +113,15 @@ function Home() {
         <h1>Cows</h1>
         <div className='w-100 rounded bg-white border shadow p-4'>
           <div className='d-flex justify-content-end'>
-            <button className='btn btn-danger mr-2' onClick={handleBulkDelete} disabled={selectedItems.length === 0}>Bulk Delete</button>
+            
             <button className='btn btn-primary' onClick={handleExport}>Export</button>
             <Link to="/create" className='btn btn-success'>Add +</Link>
+            <button className="btn btn-sm btn-danger" onClick={handleSort}>Sort</button>
           </div>
           <table className='table table-striped'>
             <thead>
               <tr>
-                <th style={{width: '15%'}}>
-                  <input type='checkbox' onChange={() => setSelectedItems(selectedItems.length === items.length ? [] : items.map(item => item.id))} />
-                </th>
+                
                 <th style={{ width: '25%' }}>Name</th>
                 <th style={{ width: '25%' }}>Age</th>
                 <th style={{ width: '25%' }}>Race</th>
@@ -132,9 +132,7 @@ function Home() {
             <tbody>
               {items.map(item => (
                 <tr key={item.id}>
-                  <td>
-                    <input type='checkbox' checked={selectedItems.includes(item.id)} onChange={() => handleCheckboxChange(item.id)}/>
-                  </td>
+                  
                   <td>{item.name}</td>
                   <td>{item.age}</td>
                   <td>{item.race}</td>
