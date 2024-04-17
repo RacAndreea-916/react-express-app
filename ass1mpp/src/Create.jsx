@@ -9,15 +9,25 @@ function Create() {
     const [values, setValues] = useState({
         name:"",
         age:"",
-        race:""
+        race:"",
+        farmerId:""
     });
 
     const handleSubmit =  (e) =>{
-        e.preventDefault();
-        axios.post('http://localhost:8081/cow', values)
-        .then(res=>{console.log(res);
-          navigate('/')})
-        .catch(err=> console.log("error"))
+      e.preventDefault();
+      const cowData = {
+          name: values.name,
+          age: parseInt(values.age), // Ensure age is parsed as integer
+          race: values.race,
+          farmer_id: values.farmerId // Replace with the actual farmer ID
+      };
+  
+      axios.post('http://localhost:8081/cow', cowData)
+          .then(res => {
+              console.log(res);
+              navigate('/');
+          })
+          .catch(err => console.error("Error adding cow:", err));
     }
 
   return (
@@ -43,6 +53,12 @@ function Create() {
             onChange={e=>setValues({...values,race:e.target.value} )} />
         </div>
         
+        <div className='mb-2'>
+            <label htmlFor='farmerId'>Name:</label>
+            <input type='text' name='farmerId' className='form-control' placeholder='Enter farmer id'
+            onChange={e=>setValues({...values,farmerId:e.target.value} )} />
+        </div>
+
         <div className='btn-group'>
             <button type='submit' className='btn btn-success' >Submit</button>
             <Link to="/" className='btn btn-primary ms-3'>Back</Link>

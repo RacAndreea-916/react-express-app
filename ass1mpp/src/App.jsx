@@ -6,6 +6,9 @@ import Create from './Create'
 import Read from './Read'
 import Update from './Update'
 import React from 'react'
+import CreateFarmer from './CreateFarmer'
+import ReadFarmer from './ReadFarmer'
+import UpdateFarmer from './UpdateFarmer'
 
 function App() {
 
@@ -18,6 +21,9 @@ function App() {
         <Route path ='/create' element={<Create/>}></Route>
         <Route path ={`/update/:id`}  element={<Update/>}></Route>
         <Route path={`/read/:id`} element={<Read />} />
+        <Route path ='/createFarmer' element={<CreateFarmer/>}></Route>
+        <Route path ={`/updateFarmer/:id`}  element={<UpdateFarmer/>}></Route>
+        <Route path={`/readFarmer/:id`} element={<ReadFarmer />} />
         
       </Routes>
       </BrowserRouter>

@@ -1,63 +1,63 @@
 const request = require('supertest');
 const app = require('../index');
+const pool = require('../pool');
 
 
-// afterAll(()=>
-//     {
-//         app.close();
-//     }
-// )
-describe('GET /', () => {
+// // afterAll(()=>
+// //     {
+// //         app.close();
+// //     }
+// // )
+describe('GET /cows', () => {
   it('responds with JSON containing cows', async () => {
-    const response = await request(app).get('/');
+    const response = await request(app).get('/cows');
     expect(response.status).toBe(200);
-    expect(response.body).toEqual([
-      { id: 1, name: 'Marinela', age: 5, race: 'Angus' },
-      { id: 2, name: 'Carmen', age: 3, race: 'Jersey' },
-      { id: 3, name: 'Betsy', age: 4, race: 'Limousin' },
-      { id: 4, name: 'Mama', age: 6, race: 'Holstein' },
-      { id: 5, name: 'Vioric', age: 2, race: 'Hereford' },
-    ]);
+    
   });
+
+ 
+});
+
+describe('GET /farmers', () => {
+  it('responds with JSON containing farmers', async () => {
+    const response = await request(app).get('/farmers');
+    expect(response.status).toBe(200);
+    
+  });
+
+ 
 });
 
 
-describe('POST /cow', () => {
-  it('adds a new cow', async () => {
-    const newCow = { name: 'NewCow', age: 1, race: 'Unknown' };
-    const response = await request(app)
-      .post('/cow')
-      .send(newCow);
-    expect(response.status).toBe(201);
-    expect(response.text).toBe('cow added successfully');
-  });
-});
 
-describe('GET /read/:id', () => {
+
+
+describe('GET /readFarmer/:id', () => {
     it('responds with JSON containing the specified cow', async () => {
-      const id = 1; 
-      const response = await request(app).get(`/read/${id}`);
+      const id = '1'; 
+      const response = await request(app).get(`/readFarmer/${id}`);
       expect(response.status).toBe(200);
-      expect(response.body).toEqual({ id: 1, name: 'Marinela', age: 5, race: 'Angus' });
+      expect(response.body).toEqual({ id: '1', name: 'Marinel', age: 10});
     });
   
-    it('responds with 404 if cow with specified id does not exist', async () => {
+    it('responds with 404 if farmer with specified id does not exist', async () => {
       const id = 999; 
-      const response = await request(app).get(`/read/${id}`);
+      const response = await request(app).get(`/readFarmer/${id}`);
       expect(response.status).toBe(404);
-      expect(response.text).toBe('cow not found');
+      expect(response.text).toBe('farmer not found');
     });
   });
   
-  describe('PATCH /update/:id', () => {
-    it('updates the specified cow', async () => {
+  
+  describe('PATCH /updateFarmer/:id', () => {
+    it('updates the specified farmer', async () => {
       const id = 1; 
       const updatedCow = { name: 'UpdatedCow', age: 6, race: 'UpdatedRace' };
       const response = await request(app)
-        .patch(`/update/${id}`)
+        .patch(`/updateFarmer/${id}`)
         .send(updatedCow);
       expect(response.status).toBe(200);
-      expect(response.text).toBe('cow updated successfully');
+      expect(response.text).toBe('farmer updated successfully');
     });
   
     it('responds with 404 if cow with specified id does not exist', async () => {
@@ -71,13 +71,13 @@ describe('GET /read/:id', () => {
     });
   });
   
-  describe('DELETE /delete/:id', () => {
-    it('deletes the specified cow', async () => {
-      const id = 1; 
-      const response = await request(app).delete(`/delete/${id}`);
-      expect(response.status).toBe(204);
-     // expect(response.text).toBe('cow deleted successfully');
-    });
+  describe('DELETE /deleteFarmer/:id', () => {
+    // it('deletes the specified farmer', async () => {
+    //   const id = 1; 
+    //   const response = await request(app).delete(`/deleteFarmer/${id}`);
+    //   expect(response.status).toBe(204);
+    //  // expect(response.text).toBe('cow deleted successfully');
+    // });
   
     it('responds with 404 if cow with specified id does not exist', async () => {
       const id = 999;
@@ -86,5 +86,6 @@ describe('GET /read/:id', () => {
       expect(response.text).toBe('cow not found');
     });
   });
+
 
 

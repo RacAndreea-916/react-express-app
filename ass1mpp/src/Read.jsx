@@ -27,6 +27,7 @@ function Read() {
           <li className='mb-3'>Name: {cow.name}</li>
           <li className='mb-3'>Age: {cow.age}</li>
           <li className='mb-3'>Race: {cow.race}</li>
+          <li className='mb-3'>Farmer Id: {cow.farmerid}</li>
         </ul>
         <Link to="/" className='btn btn-primary'>Back</Link>
       </div>
