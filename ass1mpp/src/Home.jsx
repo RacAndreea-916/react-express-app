@@ -4,6 +4,8 @@ import React from 'react'
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
+import { getAllItems, syncWithServer, addItem, deleteItem, clearIndexedDB } from './offlineStorage';
+
 
 
 const exportDataToJson = (data) => {
@@ -51,47 +53,108 @@ function Home() {
       })
     }
 
-    const loadData = () => {
-      axios.get("http://localhost:8081/cows")
-      .then(res=>setItems(res.data))
-      .catch(err => {
-        if(err.message.includes("NetworkError"))
-          alert("internet down")
-        else alert("server is down")
-        setTimeout(loadData(), 5000) 
-      })
+    // const loadData = () => {
+    //   axios.get("http://localhost:8081/cows")
+    //   .then(res=>setItems(res.data))
+    //   .catch(err => {
+    //     if(err.message.includes("NetworkError"))
+    //       alert("internet down")
+    //     else alert("server is down")
+    //     setTimeout(loadData(), 5000) 
+    //   })
 
-      axios.get("http://localhost:8081/farmers")
-      .then(res=>setFarmers(res.data))
-      .catch(err => {
-        if(err.message.includes("NetworkError"))
-          alert("internet down")
-        else alert("server is down")
-        setTimeout(loadData(), 5000) 
-      })
-    }
+    //   axios.get("http://localhost:8081/farmers")
+    //   .then(res=>setFarmers(res.data))
+    //   .catch(err => {
+    //     if(err.message.includes("NetworkError"))
+    //       alert("internet down")
+    //     else alert("server is down")
+    //     setTimeout(loadData(), 5000) 
+    //   })
+    // }
 
-    useEffect(()=>{
-      loadData();
-    },[]);
+  const [isOffline, setIsOffline] = useState(false);
 
-    const handleDelete=(id)=>{
-       axios.delete("http://localhost:8081/delete/"+id)
-       .then(res => {location.reload();
-                      alert("cow deleted!!")})
-       .catch(err =>alert("error deleting cow"))
-    }
-
-    const handleFarmerDelete=(id)=>{
-      axios.delete("http://localhost:8081/deleteFarmer/"+id)
-       .then(res => {location.reload();
-                      alert("farmer deleted!!")})
-       .catch(err =>alert("error deleting farmer"))
-    }
+  const loadData = async () => {
     
+    try {
+      const response = await axios.get('http://localhost:8081/cows');
+      setItems(response.data);
+      setIsOffline(false);
+  
+      for (const item of response.data) {
+        await addItem(item); // Ensure these items are correctly added to IndexedDB
+      }
+    } catch (err) {
+      console.error('Error fetching cows from server:', err);
+      setIsOffline(true);
+  
+      const offlineItems = await getAllItems();
+      console.log('Offline items:', offlineItems); // Inspect offline items
+      setItems(offlineItems);
+    }
+  };
+  
+  const loadFarmersFromServer = async () => {
+    try {
+      const response = await axios.get('http://localhost:8081/farmers');
+      setFarmers(response.data);
+    } catch (err) {
+      console.error('Error fetching farmers from server:', err);
+      setIsOffline(true);
+      // Add any offline handling for farmers here
+    }
+  };
 
+  useEffect(() => {
+    loadData();
+    loadFarmersFromServer();
+
+    const handleOnline = async () => {
+      console.log('Back online, syncing with the server...');
+      await syncWithServer() // Sync offline data with the server
+      loadCowsFromServer(); // Reload data from the server
+    };
+
+    window.addEventListener('online', handleOnline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+    };
+  }, []);
+
+    // useEffect(()=>{
+    //   loadData();
+    // },[]);
+
+    // const handleDelete=(id)=>{
+    //    axios.delete("http://localhost:8081/delete/"+id)
+    //    .then(res => {location.reload();
+    //                   alert("cow deleted!!")})
+    //    .catch(err =>alert("error deleting cow"))
+    // }
+
+    // const handleFarmerDelete=(id)=>{
+    //   axios.delete("http://localhost:8081/deleteFarmer/"+id)
+    //    .then(res => {location.reload();
+    //                   alert("farmer deleted!!")})
+    //    .catch(err =>alert("error deleting farmer"))
+    // }
+    const handleDelete = async (id) => {
+      if (isOffline) {
+        // Delete item from IndexedDB when offline
+        await deleteItem(id);
+        const updatedItems = items.filter(item => item.id !== id);
+        setItems(updatedItems);
+      } else {
+        // Delete item from server and IndexedDB when online
+        await axios.delete(`http://localhost:8081/delete/${id}`);
+        await deleteItem(id);
+        location.reload();
+      }
+    };
+  
     
-
 
   const handleExport = ()=>{
     exportDataToJson(items);

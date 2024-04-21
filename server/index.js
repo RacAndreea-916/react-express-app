@@ -39,7 +39,7 @@ app.get('/cows', async (req, res) => {
      
       const result = await client.query(`SELECT * FROM Cows`);
       const cows = result.rows;
-      client.release(); // Release the client back to the pool
+      client.release(); 
       res.json(cows);
     } catch (err) {
       console.error('Error executing query', err);
@@ -53,7 +53,7 @@ app.get('/cows', async (req, res) => {
      
       const result = await client.query(`SELECT * FROM Cows ORDER BY age `);
       const cows = result.rows;
-      client.release(); // Release the client back to the pool
+      client.release(); 
       res.json(cows);
     } catch (err) {
       console.error('Error executing query', err);

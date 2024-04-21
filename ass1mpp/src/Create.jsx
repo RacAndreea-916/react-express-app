@@ -17,9 +17,9 @@ function Create() {
       e.preventDefault();
       const cowData = {
           name: values.name,
-          age: parseInt(values.age), // Ensure age is parsed as integer
+          age: parseInt(values.age), 
           race: values.race,
-          farmer_id: values.farmerId // Replace with the actual farmer ID
+          farmer_id: values.farmerId 
       };
   
       axios.post('http://localhost:8081/cow', cowData)
