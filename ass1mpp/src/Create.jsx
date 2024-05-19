@@ -1,34 +1,97 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Link, useNavigate} from 'react-router-dom'
 import axios from 'axios';
+import { addItemToSyncQueue, addItem } from './offlineStorage';
+import { v4 as uuidv4 } from 'uuid'; 
+import {  getAllItemsFromLocalStorage, syncWithServerLocal, addItemToLocalStorageWithoutDuplicates } from './localStorage';
+
+const SERVER_URL = "http://localhost:8081/cows"; 
 function Create() {
 
-  
-
+  const [isServerReachable, setIsServerReachable] = useState(false);
     const navigate = useNavigate();
     const [values, setValues] = useState({
+      
         name:"",
         age:"",
         race:"",
         farmerId:""
     });
 
-    const handleSubmit =  (e) =>{
-      e.preventDefault();
-      const cowData = {
-          name: values.name,
-          age: parseInt(values.age), 
-          race: values.race,
-          farmer_id: values.farmerId 
+    useEffect(() => {
+      const checkServerConnectivity = async () => {
+        try {
+          await axios.get(SERVER_URL);
+          setIsServerReachable(true); // Server is reachable
+        } catch (error) {
+          setIsServerReachable(false); // Server is not reachable
+        }
       };
   
-      axios.post('http://localhost:8081/cow', cowData)
-          .then(res => {
-              console.log(res);
-              navigate('/');
-          })
-          .catch(err => console.error("Error adding cow:", err));
-    }
+      checkServerConnectivity(); // Check server connectivity on component mount
+    }, []);
+    
+    // const handleSubmit = async (e) => {
+    //   e.preventDefault();
+    //   const cowData = {
+    //     id: uuidv4(),
+    //     name: values.name,
+    //     age: parseInt(values.age), // Convert age to integer
+    //     race: values.race,
+    //     farmer_id: values.farmerId,
+    //   };
+  
+    //   if (!isServerReachable) {
+    //     // If server is not reachable, add to sync queue
+    //     await addItemToSyncQueue(cowData);
+    //     await addItem(cowData);
+    //     alert('Server is not reachable. Data stored locally for syncing later.');
+    //     navigate('/'); // Navigate to the home page
+    //   } else {
+    //     // Try to add to server
+    //     try {
+    //       await axios.post("http://localhost:8081/cow", cowData);
+    //       alert('Item added successfully!');
+    //       navigate('/');
+    //     } catch (error) {
+    //       console.error('Error adding item:', error);
+    //       await addItemToSyncQueue(cowData);
+    //       await addItem(cowData); // If error occurs, add to sync queue
+    //       alert('Error adding item. Data stored locally for syncing later.');
+    //     }
+    //   }
+    // };
+    const handleSubmit = async (e) => {
+      e.preventDefault();
+      const cowData = {
+        id: uuidv4(),
+        name: values.name,
+        age: parseInt(values.age), // Convert age to an integer
+        race: values.race,
+        farmerId: values.farmerId,
+      };
+  
+      if (!isServerReachable) {
+        // If the server is down, add to local storage
+        addItemToLocalStorageWithoutDuplicates('cows', cowData); // Store in local storage for later syncing
+        alert('Server is not reachable. Data stored locally for syncing later.');
+        navigate('/home'); // Navigate to the home page
+      } else {
+        try {
+          // If the server is reachable, submit the data
+          await axios.post("http://localhost:8081/cow", cowData); // Send data to the server
+          alert('Item added successfully!');
+          navigate('/');
+        } catch (error) {
+          console.error('Error adding item:', error);
+          addItemToLocalStorageWithoutDuplicates('cows', cowData); // Store in local storage if error occurs
+          alert('Error adding item. Data stored locally for syncing later.');
+        }
+      }
+    };
+  
+  
+  
 
   return (
     <div className='container-fluid bg-light min-vh-100 d-flex flex-column justify-content-center align-items-center'> 

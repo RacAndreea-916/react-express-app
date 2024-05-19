@@ -9,7 +9,9 @@ import React from 'react'
 import CreateFarmer from './CreateFarmer'
 import ReadFarmer from './ReadFarmer'
 import UpdateFarmer from './UpdateFarmer'
-
+import Login from './Login'
+import Register from './Register'
+import HomePage from './HomePage'
 function App() {
 
   
@@ -17,14 +19,16 @@ function App() {
     <div>
       <BrowserRouter>
       <Routes>
-        <Route path ='/' element={<Home /*items={items} setItems={setItems}*/ />}></Route>
+      <Route path ='/' element={<HomePage />}></Route>
+        <Route path ='/home' element={<Home />}></Route>
         <Route path ='/create' element={<Create/>}></Route>
         <Route path ={`/update/:id`}  element={<Update/>}></Route>
         <Route path={`/read/:id`} element={<Read />} />
         <Route path ='/createFarmer' element={<CreateFarmer/>}></Route>
         <Route path ={`/updateFarmer/:id`}  element={<UpdateFarmer/>}></Route>
         <Route path={`/readFarmer/:id`} element={<ReadFarmer />} />
-        
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
       </Routes>
       </BrowserRouter>
     </div>

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import axios from 'axios';
+import { updateItemInLocalStorage, getItemFromLocalStorageById } from './localStorage';
 function UpdateFarmer({items, updateCow}) {
     
 
@@ -17,6 +18,14 @@ function UpdateFarmer({items, updateCow}) {
         })
         .catch(err => {
             console.error(err);
+            const localData = getItemFromLocalStorageById('farmers', id);
+        if (localData) {
+          setValues({
+            name: localData.name,
+            age: localData.age,
+            
+          });
+        }
             alert("Error reading farmer data or farmer does not exist");
         });
 }, [id]);
@@ -32,10 +41,12 @@ const handleSubmit = (e) => {
   axios.patch(`http://localhost:8081/updateFarmer/${id}`, values)
       .then(res => {
           console.log(res);
+          updateItemInLocalStorage('farmers', { ...values, id });
           alert("Farmer updated successfully");
       })
       .catch(err => {
           console.error(err);
+          updateItemInLocalStorage('farmers', { ...values, id });
           alert("Error updating farmer or farmer does not exist");
       });
 };

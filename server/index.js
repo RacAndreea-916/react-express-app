@@ -4,10 +4,13 @@
 // import { v4 as uuidv4 } from 'uuid';
 const express = require('express');
 const cors = require('cors');
+const cookieParser = require('cookie-parser');
 const bodyParser = require('body-parser');
 const { v4: uuidv4 } = require('uuid');
 const pool = require('./pool');
-
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcrypt');
+const saltRounds = 10;
 // const cows = [
 //     { id: 1, name: 'Marinela', age: 5, race: 'Angus', farmerID:1 },
 //     { id: 2, name: 'Carmen', age: 3, race: 'Jersey', farmerID:1 },
@@ -24,7 +27,11 @@ const pool = require('./pool');
 
 
 const app = express();
-app.use(cors());
+app.use(cookieParser());
+app.use(cors({
+    origin: 'http://localhost:5173', // Replace with your React app's origin
+    credentials: true // Allow credentials (cookies) to be sent
+  }));
 app.use(bodyParser.json());
 const PORT = 8081; 
 
@@ -46,6 +53,37 @@ app.get('/cows', async (req, res) => {
       res.status(500).json({ error: 'Internal server error' });
     }
   });
+  const verifyUser = (req, res, next)=>{
+    const token =  req.cookies.token;
+    if(!token){
+        return res.json({Message: 'please provide a token'})
+    }
+    else{
+        jwt.verify(token, 'secret-discret', (err, decoded)=>{
+            if(err){
+                 return res.json({Message: 'authentification error'})
+            }
+            else{
+                req.username = decoded.username;
+                next();
+            }
+        })
+    }
+}
+  app.get('/userCows', verifyUser, async (req, res)=>{
+    try {
+        const username = req.username; // Get the username from the request
+        const client = await pool.connect();
+        const query = `SELECT * FROM Cows WHERE username =  $1`;
+        const result = await client.query(query, [username]);
+        const cows = result.rows;
+        client.release(); 
+        res.json(cows);
+    } catch (err) {
+        console.error('Error executing query', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+  })
 
   app.get('/cowsSorted', async (req, res) => {
     try {
@@ -70,7 +108,7 @@ app.get('/farmers', async (req, res) => {
       const client = await pool.connect();
       const result = await client.query(`SELECT * FROM Farmers`);
       const farmers = result.rows;
-      client.release(); // Release the client back to the pool
+      client.release(); 
       res.json(farmers);
     } catch (err) {
       console.error('Error executing query', err);
@@ -95,13 +133,42 @@ app.get('/farmers', async (req, res) => {
     
 // })
 
-app.post('/cow', async (req, res) => {
+
+app.post('/addUser', async (req, res) => {
     try {
+        const user = req.body;
+        const client = await pool.connect(); // Define client here
+
+        const checkQuery = 'SELECT * FROM users WHERE username = $1';
+        const values1 = [user.username];
+        const checkResult = await client.query(checkQuery, values1);
         
+        if (checkResult.rows.length > 0) {
+            // Username already exists, send a message indicating that
+            res.status(400).json({ Message: 'Username already exists' });
+            //console.error("already exists");
+        } else {
+            const hashedPassword = await bcrypt.hash(user.password, saltRounds);
+            const query = `INSERT INTO users(username, password) VALUES($1, $2)`;
+            const values = [user.username, hashedPassword];
+            await client.query(query, values);
+            client.release();
+            res.status(201).send("User added successfully");
+        }
+    } catch (err) {
+        console.error('Error adding user:', err);
+        res.status(500).json({ Message: 'Internal server error' });
+    }
+});
+
+
+app.post('/cow',verifyUser,  async (req, res) => {
+    try {
+        const username = req.username
         const cow = req.body;
         const client = await pool.connect();
-        const query = `INSERT INTO Cows(id, name, age, race, farmerId) VALUES($1, $2, $3, $4, $5)`;
-        const values = [uuidv4(), cow.name, cow.age, cow.race, cow.farmerId];
+        const query = `INSERT INTO Cows(id, name, age, race, farmerId, username) VALUES($1, $2, $3, $4, $5, $6)`;
+        const values = [cow.id, cow.name, cow.age, cow.race, cow.farmerId, username];
         await client.query(query, values);
         client.release();
         res.status(201).send("Cow added successfully");
@@ -110,6 +177,52 @@ app.post('/cow', async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 });
+
+
+
+
+
+app.post('/login', async (req, res) => {
+    try {
+        const { username, password } = req.body;
+        const client = await pool.connect();
+        const query = 'SELECT * FROM users WHERE Username = $1 ';
+        const values = [username];
+        const result = await client.query(query, values);
+        
+        if (result.rows.length > 0) {
+            const hashedPassword = result.rows[0].password;
+            const match = await bcrypt.compare(password, hashedPassword);
+            if(match){
+            const token = jwt.sign({ username: username }, 'secret-discret', { expiresIn: '1h' });
+            res.cookie('token', token);
+            res.status(200).json({Status: 'Success'});
+            }else {
+                res.json({ Message: 'Invalid username or password' });
+            }
+        } else {
+            res.json({ Message: 'Invalid username or password' });
+        }
+        
+        client.release();
+        
+    } catch (err) {
+        console.error('Error at login:', err); // Log the error
+        res.status(500).json({ Message: 'Internal server error' });
+    }
+});
+
+app.get('/', verifyUser, (req, res)=>{
+    return res.json({Status: 'Success', username: req.username});
+})
+
+app.get('/logout', (req, res)=>{
+    res.clearCookie('token');
+    return res.json({Status: 'Success'});
+
+})
+
+
 
 app.post('/farmer', async (req, res) => {
     try {

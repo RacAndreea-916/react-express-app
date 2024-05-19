@@ -4,7 +4,8 @@ import React from 'react'
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
-import { getAllItems, syncWithServer, addItem, deleteItem, clearIndexedDB } from './offlineStorage';
+import { getAllItems, syncWithServer, addItem,  clearIndexedDB,  openDatabase } from './offlineStorage';
+import { syncWithServerLocalFarmers,deleteItemFromLocalStorage,addItemToLocalStorageWithoutDuplicates, syncWithServerLocal, getAllItemsFromLocalStorage, clearLocalStorage, removeDuplicatesFromLocalStorage } from './localStorage';
 
 
 
@@ -32,10 +33,13 @@ function Home() {
 
     const [items, setItems] = useState([]);
     const [farmers, setFarmers] = useState([]);
+    const [isOffline, setIsOffline] = useState(false);
+    const storedItems = JSON.parse(localStorage.getItem('items')) || [];
 
     const handleSort = () =>{
       axios.get("http://localhost:8081/cowsSorted")
       .then(res=>setItems(res.data))
+      
       .catch(err => {
         if(err.message.includes("NetworkError"))
           alert("internet down")
@@ -56,6 +60,18 @@ function Home() {
     // const loadData = () => {
     //   axios.get("http://localhost:8081/cows")
     //   .then(res=>setItems(res.data))
+    //   .then(data=>{
+    //     const d = data;
+    //     if(storedItems.length !==0){
+    //       for(let i in storedItems){
+    //         axios.post("http://localhost:8081/cow", {...i})
+    //         .then(res=>alert(res.status))
+    //         .catch(err=>{console.log(err);})
+    //         d.push(i);
+    //       }
+    //       localStorage.removeItem('items')
+    //     }
+    //   })
     //   .catch(err => {
     //     if(err.message.includes("NetworkError"))
     //       alert("internet down")
@@ -73,86 +89,207 @@ function Home() {
     //   })
     // }
 
-  const [isOffline, setIsOffline] = useState(false);
-
-  const loadData = async () => {
+    const loadData = async () => {
+      try {
+        const response = await axios.get('http://localhost:8081/userCows', {
+      withCredentials: true, // Include cookies in the request
+    });
+        setItems(response.data);
     
-    try {
-      const response = await axios.get('http://localhost:8081/cows');
-      setItems(response.data);
-      setIsOffline(false);
-  
-      for (const item of response.data) {
-        await addItem(item); // Ensure these items are correctly added to IndexedDB
+        
+        response.data.forEach((item) => {
+          addItemToLocalStorageWithoutDuplicates('cows', item);
+        });
+    
+        
+        removeDuplicatesFromLocalStorage('cows');
+    
+        setIsOffline(false);
+      } catch (error) {
+        alert("server is down, data savel locally");
+        console.error('Error fetching cows from server:', error);
+        setIsOffline(true);
+    
+        // Load from local storage if server is down
+        const offlineItems = getAllItemsFromLocalStorage('cows');
+        setItems(offlineItems);
       }
-    } catch (err) {
-      console.error('Error fetching cows from server:', err);
-      setIsOffline(true);
+    };
   
-      const offlineItems = await getAllItems();
-      console.log('Offline items:', offlineItems); // Inspect offline items
-      setItems(offlineItems);
-    }
-  };
+    const loadFarmers = async () => {
+      try {
+        const response = await axios.get('http://localhost:8081/farmers');
+        setFarmers(response.data);
+        setIsOffline(false);
+        response.data.forEach((item) => {
+          addItemToLocalStorageWithoutDuplicates('farmers', item);
+        });
+    
+        
+        removeDuplicatesFromLocalStorage('farmers');
+    
+        
+      } catch (error) {
+        setIsOffline(true);
+        const offlineItems = getAllItemsFromLocalStorage('farmers');
+        setFarmers(offlineItems);
+      }
+    };
+  
+    const syncData = async () => {
+      if (!isOffline) {
+        await syncWithServerLocal('cows', 'http://localhost:8081/cow'); 
+        await syncWithServerLocalFarmers('farmers', 'http://localhost:8081/farmer'); 
+      }
+    };
+  
+    const handleOnline = async () => {
+      console.log('App is back online. Syncing data...');
+      setIsOffline(false);
+      await syncData();
+      await loadData();
+      await loadFarmers(); // Reload data after syncing
+    };
+  
+    useEffect(() => {
+      window.addEventListener('online', handleOnline); // Handle when the app goes back online
+  
+      loadData();
+      loadFarmers();
+  
+      return () => {
+        window.removeEventListener('online', handleOnline); // Cleanup event listener
+      };
+    }, []);
+  
+  // const loadData = async () => {
+  //   try {
+  //     const response = await axios.get("http://localhost:8081/cows");
+  //     setItems(response.data);
+  //     setIsOffline(false);
+      
+      
+  //     localStorage.setItem('cows', JSON.stringify(response.data));
+  //     for (const item of response.data) {
+  //             addItemToLocalStorage(item); // Ensure these items are correctly added to IndexedDB
+  //     }
+
+
+  //     // Log the parsed array/object to the console
+
+  //   } catch (error) {
+  //     setIsOffline(true);
+  //     const offlineItems = getAllItemsFromLocalStorage('cows');
+  //     console.log(offlineItems); // Load from local storage
+  //     setItems(offlineItems);
+  //   }
+  // };
+
+  // const checkServerStatus = async () => {
+  //   try {
+  //     await axios.get("http://localhost:8081/cows"); // Ping server
+  //     if (!isOffline) {
+  //       await syncWithServerLocal('cows', "http://localhost:8081/cow"); // Sync with server when back online
+  //       await loadData(); // Refresh data
+  //       setIsOffline(false);
+  //       console.log("server ok");
+  //     }
+  //   } catch (error) {
+  //     setIsOffline(true);
+  //   }
+  // };
+
+  // useEffect(() => {
+  //   loadFarmersFromServer();
+  //   loadData(); // Load initial data
+  //   //const serverCheckInterval = setInterval(checkServerStatus, 10000); // Check server status every 10 seconds
+  //   checkServerStatus();
+  //   // return () => {
+  //   //   clearInterval(serverCheckInterval); // Cleanup
+  //   // };
+  // }, []);
+  // const loadData = async () => {
+    
+  //   try {
+  //     const response = await axios.get('http://localhost:8081/cows');
+  //     setItems(response.data);
+  //     setIsOffline(false);
+  //     //await syncWithServer();
+  //     await clearIndexedDB();
+  
+  //     for (const item of response.data) {
+  //       await addItem(item); // Ensure these items are correctly added to IndexedDB
+  //     }
+  //   } catch (err) {
+     
+  //     //console.error('Error fetching cows from server:', err);
+  //     console.log("server is down");
+  //     setIsOffline(true);
+  
+  //     const offlineItems = await getAllItems();
+  //     console.log('Offline items:', offlineItems); // Inspect offline items
+  //     setItems(offlineItems);
+  //   }
+  // };
   
   const loadFarmersFromServer = async () => {
     try {
       const response = await axios.get('http://localhost:8081/farmers');
       setFarmers(response.data);
     } catch (err) {
-      console.error('Error fetching farmers from server:', err);
+      //console.error('Error fetching farmers from server:', err);
       setIsOffline(true);
       // Add any offline handling for farmers here
     }
   };
 
-  useEffect(() => {
-    loadData();
-    loadFarmersFromServer();
+  // const handleOnline = async () => {
+  //   try {
+      
+  //     console.log('Back online, syncing with the server...');
+  //     await syncWithServer(); // Sync offline data with the server    
+  //     await loadData(); 
+  //     //await clearIndexedDB();// Reload data from server
+  //   } catch (error) {
+  //     console.error("Error during online handling:", error);
+  //     // Implement retry logic or offline handling here
+  //   }
+  // };
+  
+  
 
-    const handleOnline = async () => {
-      console.log('Back online, syncing with the server...');
-      await syncWithServer() // Sync offline data with the server
-      loadCowsFromServer(); // Reload data from the server
-    };
-
-    window.addEventListener('online', handleOnline);
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-    };
-  }, []);
+  // useEffect(() => {
+  //   loadData();
+  //   loadFarmersFromServer();
+  //   //clearIndexedDB();
+  //   // if(!isOffline)
+  //   //   {handleOnline();
+  //   //   }
+   
+   
+  // }, []);
 
     // useEffect(()=>{
     //   loadData();
     // },[]);
 
-    // const handleDelete=(id)=>{
-    //    axios.delete("http://localhost:8081/delete/"+id)
-    //    .then(res => {location.reload();
-    //                   alert("cow deleted!!")})
-    //    .catch(err =>alert("error deleting cow"))
-    // }
+    const handleDelete=(id)=>{
+       axios.delete("http://localhost:8081/delete/"+id)
+       .then(res => {location.reload();
+                      alert("cow deleted!!");
+                    deleteItemFromLocalStorage('cows',id)})
+       .catch(err =>alert("error deleting cow"))
+    }
 
-    // const handleFarmerDelete=(id)=>{
-    //   axios.delete("http://localhost:8081/deleteFarmer/"+id)
-    //    .then(res => {location.reload();
-    //                   alert("farmer deleted!!")})
-    //    .catch(err =>alert("error deleting farmer"))
-    // }
-    const handleDelete = async (id) => {
-      if (isOffline) {
-        // Delete item from IndexedDB when offline
-        await deleteItem(id);
-        const updatedItems = items.filter(item => item.id !== id);
-        setItems(updatedItems);
-      } else {
-        // Delete item from server and IndexedDB when online
-        await axios.delete(`http://localhost:8081/delete/${id}`);
-        await deleteItem(id);
-        location.reload();
-      }
-    };
+    const handleFarmerDelete=(id)=>{
+      axios.delete("http://localhost:8081/deleteFarmer/"+id)
+       .then(res => {location.reload();
+                      alert("farmer deleted!!");
+                      deleteItemFromLocalStorage('farmers',id)})
+       .catch(err =>alert("error deleting farmer"))
+    }
+    
+    
   
     
 
